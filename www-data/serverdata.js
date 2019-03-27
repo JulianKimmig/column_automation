@@ -1,0 +1,1 @@
+var serverdata = {"socketport": 8888};
