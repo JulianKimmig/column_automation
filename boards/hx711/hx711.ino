@@ -6,15 +6,11 @@
 #define COMMANDBYTEPOSITION 1
 #define LENBYTEPOSITION 2
 #define DATABYTEPOSITION 3
-#define CMD_IDENTIFY 255
-#define CMD_IDENTIFY_LENGTH 0
-#define CMD_GETFIMWARE 254
-#define CMD_GETFIMWARE_LENGTH 0
 #define MAXFUNCTIONS 6
 #define SERIALARRAYSIZE 13
 #define BAUD 9600
 #define DATARATE 200
-#define FIRMWARE 0
+#define FIRMWARE 6
 #include <EEPROM.h>
 #include <HX711.h>
 uint8_t dout = 2;
@@ -33,7 +29,7 @@ uint8_t c;
 bool identified = false;
 HX711 hx711;
 uint8_t average = 1;
-uint8_t gain = 64;
+uint8_t gain = 32;
 uint16_t generate_checksum(uint8_t* data, int count){
 uint16_t sum1 = 0;
 uint16_t sum2 = 0;
@@ -136,7 +132,7 @@ serialreadpos++;
 }
 }
 void identify_0(uint8_t* data, uint8_t s){
-identified=data[0];if(!identified){uint64_t id = get_id();write_data(id,0);}}
+identified=data[0];uint64_t id = get_id();write_data(id,0);}
 void get_fw_1(uint8_t* data, uint8_t s){
 write_data((uint64_t)FIRMWARE,1);}
 void datarate_2(uint8_t* data, uint8_t s){
@@ -162,7 +158,7 @@ if(ct-lastdata>datarate && identified){
 dataloop();
 lastdata=ct;
 }
-Serial.println(hx711.read_average(average),5);
+
 }
 
 void setup(){

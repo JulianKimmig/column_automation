@@ -5,85 +5,71 @@
     <title>Fraction Collector</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/snap.svg/0.5.1/snap.svg-min.js"></script>
+    <script
+            src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"
+            integrity="sha256-VazP97ZCwtekAsvgPBSUwPFKdrwD3unUfSGVYrahUqU="
+            crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
 
-    <script src="/serverdata.js"></script>
-    <script src="/websocketserver/websocket_communication_server.js"></script>
-    <script src="/arduinocontroller/arduinocontrollserver.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
+
+    <script type="text/javascript" src="/serverdata.js"></script>
+    <script type="text/javascript" src="/websocketserver/websocket_communication_server.js"></script>
+    <script type="text/javascript" src="/arduinocontroller/arduinocontrollserver.js"></script>
+
+    <script type="text/javascript" src="/svggraph.js"></script>
+
 </head>
 <body>
-<div>
-    <form>
-        <div class="form-group">
-            <label># vials x:</label>
-            <input id="vialnumber_x" name="vialnumber_x" type="number" value="4" min="1" max="40"/>
+<div class="container">
+<ul class="nav nav-tabs">
+    <li class="active"><a data-toggle="tab" href="#fractioncollector">Fraction Collector</a></li>
+    <li><a data-toggle="tab" href="#graph">Graph</a></li>
+    <li><a data-toggle="tab" href="#advanced">Advanced</a></li>
+</ul>
+<div class="tab-content">
+    <div id="fractioncollector" class="tab-pane fade in active">
+        <div>
+            <form>
+                <div class="form-group">
+                    <label>x</label>
+                    <input id="frame_width" name="frame_width" type="number" value="400" min="10"/>
+                </div>
+                <div class="form-group">
+                    <label>y</label>
+                    <input id="frame_height" name="frame_height" type="number" value="500" min="10"/>
+                </div>
+                <div class="form-group">
+                    <label>savedist</label>
+                    <input id="savedist" name="savedist" type="number" value="20" min="10"/>
+                </div>
+            </form>
+            <button onclick="setparameters()">set</button>
         </div>
-        <div class="form-group">
-            <label># vials y:</label>
-            <input id="vialnumber_y" name="vialnumber_y" type="number" value="5" min="1" max="40"/>
+        <div id="svgcontainer">
+            <svg id="vialview" xmlns="http://www.w3.org/2000/svg" width="600" height="600">
+            </svg>
         </div>
-        <div class="form-group">
-            <label>vialdist(mm)</label>
-            <input id="vialdistinput" name="vialdist" type="number" value="20" min="10" max="50" step="0.1"/>
+        left click to move to point;
+        ctrl + left click to set point
+    </div>
+    <div id="graph" class="tab-pane fade">
+        <div>
+            <svg id="svggraph" width="800" height="400"></svg>
         </div>
-    </form>
-    <button onclick="setparameters()">set</button>
+    </div>
+    <div id="advanced" class="tab-pane fade">
+        <div id="advanced_content">
+            steps_per_mm: <input type="number" id="steps_per_mm" name="steps_per_mm" value="200" min="1" max="10000"/>
+            acceleration: <input type="number" id="acceleration" name="acceleration" value="10" min="1" max="100"/>
+            max_mm_sec: <input type="number" id="max_mm_sec" name="max_mm_sec" value="1" min="0.1" max="100"/>
+        </div>
+    </div>
 </div>
-<button id="nextvial_button">next vial</button>
-<button onclick="get_fill_time()">get fill time</button>
-<button onclick="reset_vialss()">reset</button>
-<div>coolected vials: <span id="vial_nr">0</span></div>
-<div id="timetext">0</div>
-<progress value="0" max="10" id="progressBar"></progress>
-
-<div>
-    <form>
-        <div class="form-group">
-            <label>x</label>
-            <input id="frame_width" name="frame_width" type="number" value="400" min="10"/>
-        </div>
-        <div class="form-group">
-            <label>y</label>
-            <input id="frame_height" name="frame_height" type="number" value="500" min="10"/>
-        </div>
-        <div class="form-group">
-            <label>savedist</label>
-            <input id="savedist" name="savedist" type="number" value="20" min="10"/>
-        </div>
-    </form>
-    <button onclick="setparameters()">set</button>
-</div>
-
-<div id="svgcontainer">
-    <svg id="vialview" xmlns="http://www.w3.org/2000/svg" width="600" height="600">
-    </svg>
-</div>
-left click to move to point;
-ctrl + left click to set point
-<div id="advanced_content">
-     steps_per_mm: <input type="number" id="steps_per_mm" name="steps_per_mm" value="200" min="1" max="10000"/>
-    acceleration: <input type="number" id="acceleration" name="acceleration" value="10" min="1" max="100"/>
-    max_mm_sec: <input type="number" id="max_mm_sec" name="max_mm_sec" value="1" min="0.1" max="100"/>
 </div>
 
 <script>
-    var filltime = 30000000;
-    var updatetime = 50;
-    var timer = null;
-    var progressbar = $("#progressBar");
-    var timetext = $("#timetext");
-    var nextvial_button = $('#nextvial_button');
-    var mesuring_time = false;
-    var collected_vials = 0;
-    var maxvials = 10;
-    nextvial_button.click(nextvial);
-    var svgvials=[];
-    currentx=0;
-    currenty=0;
-    maxx=0;
-    maxy=0;
-    vialdist=10;
-    
-    
     var vialview = Snap('#vialview');
     var needlerad=3;
     var needle = vialview.circle(0,0,needlerad).attr({
@@ -130,99 +116,22 @@ ctrl + left click to set point
     var savedist_line_left=vialview.rect(-frame_boarder/2,0,frame_boarder/2,100).attr(savedist_attributes).attr({name:"savedist_line_left"});
     var savedist_line_right=vialview.rect(100,0,100,100).attr(savedist_attributes).attr({name:"savedist_line_right"});
 
-    var vialview_matrix = Snap.matrix( vialview.node.getScreenCTM().inverse() );
-
     var vialrad=15;
     var vials_attributes = {fill: "#3fe6ff",stroke:"#709aff", strokeWidth: 1,opacity:0.5};
     var vials=[];
 
-    function starttimer() {
-        if (timer !== null) {
-            clearInterval(timer);
-        }
-        var starttime = new Date().getTime();
-
-        progressbar.attr("min", 0);
-        progressbar.attr("max", filltime);
-
-        timer = setInterval(function () {
-            let time = new Date().getTime() - starttime;
-            timetext.text(parseInt((filltime - time) / 100) / 10);
-            progressbar.attr("value", time);
-            if (time >= filltime) {
-                clearInterval(timer);
-                timer = null;
-                nextvial();
-            }
-        }, updatetime);
-    }
-
-    function reset_vialss() {
-        collected_vials = -1;
-        currentx=-1;
-        currenty=0;
-
-        for(let x in svgvials)
-            for(let y in svgvials[x])
-                svgvials[x][y].attr({ fill: "#ffffff"});
-        nextvial();
-        get_fill_time();
-
-    }
-
-    function nextvial() {
-        let deltax=0;
-        let deltay=0;
-        if (mesuring_time) {
-            mesuring_time = false;
-            clearInterval(timer);
-        }
-        if(currentx>=0){
-            svgvials[currentx][currenty].attr({fill: "#A8FF99",});
-        }
-        collected_vials++;
-        $('#vial_nr').text(collected_vials);
-        if (maxvials <= collected_vials)
-            return;
-        starttimer();
-
-
-        //svgvials[collected_vials].attr({fill: "#FAFF92",});
-
-        if(currenty%2===0){
-            currentx++;
-            deltax= vialdist;
-        }
-        else {
-            currentx--;
-            deltax= -vialdist;
-        }
-
-        if(currentx>=maxx||currentx<0){
-            currenty++;
-            deltay=vialdist;
-            deltax=0;
-            currentx=Math.max(0,Math.min(currentx,maxx-1))
-        }
-        svgvials[currentx][currenty].attr({fill: "#FAFF92",});
-
-        wscs.ws.send(wscs.commandmessage("move_to", "gui", 'COM6',true,[], {xyz:[(currentx+currenty)*vialdist,(currentx-currenty)*vialdist,0]}))
-    }
-
-    function get_fill_time() {
-        mesuring_time = true;
-        clearInterval(timer);
-        progressbar.attr("value", 0);
-        var starttime = new Date().getTime();
-
-        timer = setInterval(function () {
-            let time = new Date().getTime() - starttime;
-            timetext.text(parseInt((time) / 100) / 10);
-            filltime = time;
-        }, updatetime);
-    }
-
-    get_fill_time();
+   var plotcolors=[
+        '#1f77b4',  // muted blue
+        '#ff7f0e',  // safety orange
+        '#2ca02c',  // cooked asparagus green
+        '#d62728',  // brick red
+        '#9467bd',  // muted purple
+        '#8c564b',  // chestnut brown
+        '#e377c2',  // raspberry yogurt pink
+        '#7f7f7f',  // middle gray
+        '#bcbd22',  // curry yellow-green
+        '#17becf'   // blue-teal
+    ];
 
     function setparameters() {
         maxx = parseInt($("#vialnumber_x").val());
@@ -250,11 +159,10 @@ ctrl + left click to set point
         $frame_height.val(h);
         vialview.attr({viewBox:[-frame_boarder,-frame_boarder,w+2*frame_boarder,h+2*frame_boarder].join(' ')});
         vialview.attr({width:w+2*frame_boarder,height:h+2*frame_boarder});
-        vialview_matrix = Snap.matrix( vialview.node.getScreenCTM().inverse() );
+
 
         line_v.attr({y1:-frame_boarder,y2:h+frame_boarder,strokeWidth: 1});
         line_h.attr({x1:-frame_boarder,x2:w+frame_boarder,strokeWidth: 1});
-        vialview_matrix = Snap.matrix( vialview.node.getScreenCTM().inverse() );
 
         border_line_top.attr({x1:-frame_boarder,x2:w+frame_boarder});
         border_line_bottom.attr({x1:-frame_boarder,x2:w+frame_boarder,y1:h+frame_boarder/2,y2:h+frame_boarder/2});
@@ -269,23 +177,23 @@ ctrl + left click to set point
         savedist_line_right.attr({x:w-savedist,y:savedist,width:frame_boarder+savedist,height:h-2*savedist});
 
         if(send) {
-            wscs.ws.send(wscs.commandmessage("set_frame_size", "gui", 'columnautomate', true, [], {width: w, height: h,savedist:savedist}));
+            wscs.send(wscs.commandmessage("set_frame_size", "gui", 'columnautomate', true, [], {width: w, height: h,savedist:savedist}));
         }
     }
 
     function move_to(x,y){
-        wscs.ws.send(wscs.commandmessage("move_to", "gui", 'columnautomate',true,[], {x:x,y:y}))
+        wscs.send(wscs.commandmessage("move_to", "gui", 'columnautomate',true,[], {x:x,y:y}))
     }
 
     function set_position(x,y){
-        wscs.ws.send(wscs.commandmessage("set_position", "gui", 'columnautomate',true,[], {x:x,y:y}))
+        wscs.send(wscs.commandmessage("set_position", "gui", 'columnautomate',true,[], {x:x,y:y}))
     }
 
 
     function remove_vial(vial,send=true) {
         vial.svg.remove();
         if(send)
-            wscs.ws.send(wscs.commandmessage("remove_vial", "gui", 'columnautomate',true,[], {position:vials.indexOf(vial)}));
+            wscs.send(wscs.commandmessage("remove_vial", "gui", 'columnautomate',true,[], {position:vials.indexOf(vial)}));
         let index = vials.indexOf(vial);
         vials.splice( index, 1 );
         for(let i=index;i<vials.length;i++){
@@ -332,17 +240,19 @@ ctrl + left click to set point
         v.svg.vial = v;
 
         if(send)
-            wscs.ws.send(wscs.commandmessage("add_vial", "gui", 'columnautomate',true,[], {x:x,y:y,position:position}));
+            wscs.send(wscs.commandmessage("add_vial", "gui", 'columnautomate',true,[], {x:x,y:y,position:position}));
         vials.splice(position, 0, v);
     }
 
-    function moveFunc( event) {
+    function moveFunc(event) {
+        var vialview_matrix = Snap.matrix( vialview.node.getScreenCTM().inverse() );
         var x = vialview_matrix.x( event.clientX, event.clientY );
         var y = vialview_matrix.y( event.clientX, event.clientY );
         line_v.attr({x1:x,x2:x});
         line_h.attr({y1:y,y2:y});
     }
     function upFunc(event){
+        var vialview_matrix = Snap.matrix( vialview.node.getScreenCTM().inverse() );
         var x = vialview_matrix.x( event.clientX, event.clientY );
         var y = vialview_matrix.y( event.clientX, event.clientY );
         if(cntrlIsPressed && shiftIsPressed){
@@ -378,17 +288,13 @@ ctrl + left click to set point
         headgroup.transform("t"+x+" "+y)
     }
 
-    function parsedata(data){
-        switch (data.data.key) {
-            case "motorposition":set_head_position(data.data.x,data.data.y); break;
-        }
-    }
+
 
     setTimeout(function () {
-        wscs.ws.send(wscs.commandmessage("get_frame_size", "gui", 'columnautomate',true,[], {data_target:"gui"}))
+        wscs.send(wscs.commandmessage("get_frame_size", "gui", 'columnautomate',true,[], {data_target:"gui"}))
     },2000);
     setTimeout(function () {
-        wscs.ws.send(wscs.commandmessage("get_vials", "gui", 'columnautomate',true,[], {data_target:"gui"}))
+        wscs.send(wscs.commandmessage("get_vials", "gui", 'columnautomate',true,[], {data_target:"gui"}))
     },2000);
 
     wscs.add_cmd_funcion("set_vials",function (m){
@@ -397,7 +303,6 @@ ctrl + left click to set point
         }
     });
 
-    wscs.add_type_funcion("data",parsedata);
     wscs.add_cmd_funcion("set_frame_size",function (m){
         savedist=m.data.kwargs.savedist;
         $savedist.val(savedist);
@@ -427,7 +332,7 @@ ctrl + left click to set point
     function set_steps_per_mm(steps_per_mm,send=true){
         $steps_per_mm.val(steps_per_mm);
         if(send)
-            wscs.ws.send(wscs.commandmessage("set_steps_per_mm", "gui", 'columnautomate',true,[], {steps_per_mm:steps_per_mm}))
+            wscs.send(wscs.commandmessage("set_steps_per_mm", "gui", 'columnautomate',true,[], {steps_per_mm:steps_per_mm}))
     }
     wscs.add_cmd_funcion("set_steps_per_mm",function (m){
         set_steps_per_mm(m.data.kwargs.steps_per_mm,false);
@@ -440,7 +345,7 @@ ctrl + left click to set point
     function set_acceleration(acceleration,send=true){
         $acceleration.val(acceleration);
         if(send)
-            wscs.ws.send(wscs.commandmessage("set_acceleration", "gui", 'columnautomate',true,[], {acceleration:acceleration}))
+            wscs.send(wscs.commandmessage("set_acceleration", "gui", 'columnautomate',true,[], {acceleration:acceleration}))
     }
     wscs.add_cmd_funcion("set_acceleration",function (m){
         set_acceleration(m.data.kwargs.acceleration,false);
@@ -453,12 +358,75 @@ ctrl + left click to set point
     function set_max_mm_sec(max_mm_sec,send=true){
         $max_mm_sec.val(max_mm_sec);
         if(send)
-            wscs.ws.send(wscs.commandmessage("set_max_mm_sec", "gui", 'columnautomate',true,[], {max_mm_sec:max_mm_sec}))
+            wscs.send(wscs.commandmessage("set_max_mm_sec", "gui", 'columnautomate',true,[], {max_mm_sec:max_mm_sec}))
     }
     wscs.add_cmd_funcion("set_max_mm_sec",function (m){
         set_max_mm_sec(m.data.kwargs.max_mm_sec,false);
     });
 
+    function parsedata(data,redraw_svg=true){
+        switch (data.data.key) {
+            case "motorposition":set_head_position(data.data.x,data.data.y); break;
+            default:
+                if(data.data.key.includes("_position_")) {
+
+                }else{
+                    if(!svggraph.has_dataset(data.data.key)) {
+                        let ds = svggraph.add_dataset(data.data.key, "y_" + data.data.key);
+                        ds.options.yAxis.options.position = "right";
+                        ds.options.yAxis.options.dx =100*(svggraph.yAxes.length-3);
+                    }
+                }
+                svggraph.add_data(data.data.key, data.data.x, data.data.y,redraw_svg)
+        }
+    }
+    wscs.add_type_funcion("data",parsedata);
+
+    var svggraph = new SVGGraph("svggraph");
+
+
+
+    wscs.add_cmd_funcion("set_data",function (data){
+        svggraph.clear();
+        data = data.data.kwargs.data;
+        for(let key in data){
+            for(let i=0;i<data[key].length;i++){
+                parsedata({data:{key:key,x:data[key][i][0],y:data[key][i][1],t:data[key][i][2]}},redraw_svg=false)
+            }
+        }
+        svggraph.redraw();
+    });
+
+    function ini(){
+        let identified=acs.identified;
+        acs.identify_functions.push(function () {
+            wscs.ws.send(wscs.commandmessage(cmd = "get_data", sender = "gui", "columnautomate", true, [], {data_target: "gui",timestep:1000}))
+        });
+        if(identified){
+            for(let i=0;i<acs.identify_functions.length;i++){
+                acs.identify_functions[i]();
+            }
+        }
+    }
+    ini();
+
+
+
+    t0 = new Date().getTime();
+    //svggraph.add_data("random",new Date().getTime()-t0,0);
+    //svggraph.add_data("random",new Date().getTime()-t0,1);
+    r2 = svggraph.add_dataset("random2","yrandom2");
+    r2.options.yAxis.options.position = "right";
+    //r2.options.yAxis.options.dx =-100;
+    svggraph.redraw();
+
+    svggraph.add_data("random2",new Date().getTime()-t0,100);
+    window.setInterval(function(){
+      //  svggraph.add_data("random",new Date().getTime()-t0,Math.random())
+    }, 1000);
+ //   window.setInterval(function(){
+  //      svggraph.add_data("random2",new Date().getTime()-t0,Math.random())
+   // }, 2000);
 
 </script>
 

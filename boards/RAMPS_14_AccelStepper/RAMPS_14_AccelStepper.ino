@@ -149,7 +149,8 @@ serialreadpos++;
 }
 }
 void identify_0(uint8_t* data, uint8_t s){
-identified=data[0];if(!identified){uint64_t id = get_id();write_data(id,0);}}
+identified=data[0];uint64_t id = get_id();write_data(id,0);
+}
 void get_fw_1(uint8_t* data, uint8_t s){
 write_data((uint64_t)FIRMWARE,1);}
 void datarate_2(uint8_t* data, uint8_t s){
